@@ -1,8 +1,8 @@
 package com.wenger.location_viewer.app
 
 import android.app.Application
-import com.wenger.common.di.firebaseModule
-import com.wenger.common.di.logSignUpModule
+import com.wenger.common.di.databaseModule
+import com.wenger.common.di.authModule
 import com.wenger.location_viewer.di.appModule
 import com.wenger.location_viewer.di.repositoryModule
 import org.koin.android.ext.koin.androidContext
@@ -16,7 +16,7 @@ class CheckerApplication: Application() {
         startKoin {
             androidLogger()
             androidContext(this@CheckerApplication)
-            modules(listOf(appModule, firebaseModule, repositoryModule, logSignUpModule))
+            modules(listOf(appModule, databaseModule, repositoryModule, authModule))
         }
     }
 }

@@ -1,12 +1,14 @@
 package com.wenger.location_viewer.checker
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenger.common.data.UserLocation
 import com.wenger.location_viewer.models.UserLocationResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.*
@@ -16,30 +18,30 @@ class MapsCheckerViewModel(
     private val repository: IMapsCheckerRepository
 ) : ViewModel() {
 
-    private val _logOutState = MutableLiveData<Boolean>()
-    val logOutState: LiveData<Boolean>
-        get() = _logOutState
+    private val _logOutState = MutableStateFlow(false)
+    val logOutState = _logOutState.asStateFlow()
 
-    private val _location = MutableLiveData<ArrayList<UserLocationResult>>()
-    val location: LiveData<ArrayList<UserLocationResult>>
-        get() = _location
+    private val _location = MutableSharedFlow<ArrayList<UserLocationResult>>()
+    val location = _location.asSharedFlow()
 
-    private var desiredDate: Boolean? = null
+    private var validDate: Boolean? = null
 
     fun logOut() {
-        viewModelScope.launch(Dispatchers.Main) {
-            try {
-                repository.logOutUser()
-            } catch (e: Exception) {
-                Timber.e(e.localizedMessage)
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = repository.logOutUser()
+            result
+                .onSuccess {
+                    _logOutState.emit(true)
+                }
+                .onFailure {
+                    Timber.e(it.message)
+                }
         }
-        _logOutState.postValue(true)
     }
 
     fun setLocation(calendar: Calendar) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val result: ArrayList<UserLocation> = repository.getData()
+        viewModelScope.launch(Dispatchers.IO) {
+            val result: ArrayList<UserLocation> = repository.getLocationList()
             getValues(result, calendar)
         }
     }
@@ -48,19 +50,22 @@ class MapsCheckerViewModel(
         val listResult = ArrayList<UserLocationResult>()
         list.forEach { userLocation ->
             val timestamp: Long = userLocation.timestamp
-            dateComparison(timestamp, calendar)
-            if (desiredDate == true) {
+            validateDate(timestamp, calendar)
+            if (validDate == true) {
                 val latitude = userLocation.latitude
                 val longitude = userLocation.longitude
                 val userLocationResult = UserLocationResult(longitude, latitude, timestamp)
                 listResult.add(userLocationResult)
             }
         }
-        _location.postValue(listResult)
+        viewModelScope.launch {
+            _location.emit(listResult)
+        }
+
     }
 
-    private fun dateComparison(timestamp: Long, calendar: Calendar) {
-        desiredDate = false
+    private fun validateDate(timestamp: Long, calendar: Calendar) {
+        validDate = false
         val selectedDate: Date = calendar.time
         val startDay = Calendar.getInstance()
         val endDay = Calendar.getInstance()
@@ -73,7 +78,7 @@ class MapsCheckerViewModel(
 
         val locationDate = Date(timestamp)
         if (locationDate.before(endDay.time) && locationDate.after(startDay.time)) {
-            desiredDate = true
+            validDate = true
         }
     }
 

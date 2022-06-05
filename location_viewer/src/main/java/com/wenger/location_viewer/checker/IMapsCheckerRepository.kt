@@ -1,13 +1,12 @@
 package com.wenger.location_viewer.checker
 
 import com.wenger.common.data.UserLocation
-import com.wenger.common.util.Resource
 import java.util.ArrayList
 
 interface IMapsCheckerRepository {
 
-    suspend fun logOutUser()
+    suspend fun logOutUser() : Result<Unit>
 
-    suspend fun getData(): ArrayList<UserLocation>
+    suspend fun getLocationList(): ArrayList<UserLocation>
 
 }

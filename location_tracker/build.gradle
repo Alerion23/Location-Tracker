@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.wenger.locationtrackerkotlin"
-        minSdk 21
+        minSdk 23
         targetSdk 31
         versionCode 1
         versionName "1.0"
@@ -60,6 +60,9 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.1'
+    //SplashScreen
+    implementation 'androidx.core:core-splashscreen:1.0.0-rc01'
+
 
     testImplementation "io.insert-koin:koin-test:3.2.0"
     testImplementation 'junit:junit:4.+'

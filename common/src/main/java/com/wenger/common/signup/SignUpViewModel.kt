@@ -1,67 +1,73 @@
 package com.wenger.common.signup
 
 import androidx.core.util.PatternsCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.AuthResult
-import com.wenger.common.ILogSignUpRepository
-import com.wenger.common.R
-import com.wenger.common.util.Resource
+import com.wenger.common.IAuthRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SignUpViewModel(
-    private val repository: ILogSignUpRepository
+    private val repository: IAuthRepository
 ) : ViewModel() {
 
-    private val _userRegistrationStatus = MutableLiveData<Resource<AuthResult>>()
-    val userRegistrationStatus: LiveData<Resource<AuthResult>>
-        get() = _userRegistrationStatus
+    private val _userRegistrationStatus = MutableSharedFlow<Result<Void>>()
+    val userRegistrationStatus = _userRegistrationStatus.asSharedFlow()
 
-    private val _errorEmail = MutableLiveData<Int>()
-    val errorEmail: LiveData<Int>
-        get() = _errorEmail
+    private val emailFlow = MutableStateFlow("")
 
-    private val _errorPassword = MutableLiveData<Int>()
-    val errorPassword: LiveData<Int>
-        get() = _errorPassword
+    private val passwordFlow = MutableStateFlow("")
 
-    private val _errorUserName = MutableLiveData<Int>()
-    val errorUserName: LiveData<Int>
-        get() = _errorUserName
+    private val userNameFlow = MutableStateFlow("")
 
-    fun createNewUser(email: String, password: String, userName: String) {
-        if (email.isEmpty()) {
-            _errorEmail.value = R.string.email_required
-            return
+    private val _signUpFieldValid = combine(emailFlow, passwordFlow, userNameFlow) {
+        email, password, userName ->
+        var isEmailValid = false
+        var isPasswordValid = false
+        var isUserNameValid = false
+        if (email.isNotEmpty() && PatternsCompat.EMAIL_ADDRESS.matcher(email).matches()) {
+            isEmailValid = true
         }
-
-        if (!PatternsCompat.EMAIL_ADDRESS.matcher(email).matches()) {
-            _errorEmail.value = R.string.provide_valid_email
-            return
+        if (password.isNotEmpty() && password.length >= 8) {
+            isPasswordValid = true
         }
-
-        if (password.isEmpty()) {
-            _errorPassword.value = R.string.password_required
-            return
+        if (userName.isNotEmpty()) {
+            isUserNameValid = true
         }
+        isEmailValid && isPasswordValid && isUserNameValid
+    }
 
-        if (password.length < 8) {
-            _errorPassword.value = R.string.min_8_characters
-            return
+    private val _validState = MutableStateFlow(false)
+    val validState = _validState.asStateFlow()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            _signUpFieldValid.collectLatest {
+                _validState.emit(it)
+            }
         }
+    }
 
-        if (userName.isEmpty()) {
-            _errorUserName.value = R.string.username_required
-            return
-        }
+    fun onEmailEntered(email: String) {
+        emailFlow.tryEmit(email)
+    }
 
-        _userRegistrationStatus.postValue(Resource.Loading())
-        viewModelScope.launch(Dispatchers.Main) {
+    fun onPasswordEntered(password: String) {
+        passwordFlow.tryEmit(password)
+    }
+
+    fun onUserNameEntered(userName: String) {
+        userNameFlow.tryEmit(userName)
+    }
+
+    fun createNewUser() {
+        val email = emailFlow.value
+        val password = passwordFlow.value
+        val userName = userNameFlow.value
+        viewModelScope.launch(Dispatchers.IO) {
             val result = repository.signUpNewUser(email, password, userName)
-            _userRegistrationStatus.postValue(result)
+            _userRegistrationStatus.emit(result)
         }
     }
 }

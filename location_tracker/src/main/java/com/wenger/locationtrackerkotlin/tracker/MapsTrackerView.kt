@@ -1,6 +1,7 @@
 package com.wenger.locationtrackerkotlin.tracker
 
 import android.Manifest
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import com.google.android.gms.location.*
@@ -22,21 +23,21 @@ import com.google.android.gms.common.api.ResolvableApiException
 import android.os.Looper
 import androidx.activity.result.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
 
 import com.google.android.gms.location.LocationResult
-
-import androidx.lifecycle.Observer
 
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.MarkerOptions
-import com.wenger.common.util.Resource
-
+import com.wenger.locationtrackerkotlin.login.LoginView
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
 
-    private lateinit var mMap: GoogleMap
-    private lateinit var binding: MapsTrackerViewBinding
+    private var mMap: GoogleMap? = null
+    private var binding: MapsTrackerViewBinding? = null
     private var mLocationReq: LocationRequest? = null
     private val MIN_TIME: Long = 600000
     private val ZOOM_VALUE: Float = 15f
@@ -44,12 +45,14 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
     private val gpsState = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            Toast.makeText(this, R.string.gps_enable, Toast.LENGTH_SHORT).show()
-            checkLocationPermission()
-        }
-        if (result.resultCode == RESULT_CANCELED) {
-            Toast.makeText(this, R.string.gps_denided, Toast.LENGTH_SHORT).show()
+        when (result.resultCode) {
+            RESULT_OK -> {
+                Toast.makeText(this, R.string.gps_enable, Toast.LENGTH_SHORT).show()
+                checkLocationPermission()
+            }
+            RESULT_CANCELED -> {
+                Toast.makeText(this, R.string.gps_denided, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -57,8 +60,9 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = MapsTrackerViewBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        binding = MapsTrackerViewBinding.inflate(layoutInflater).also {
+            setContentView(it.root)
+        }
         supportActionBar?.hide()
         setUpView()
     }
@@ -67,14 +71,51 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
-        onLogoutClickListener()
-        onLogOutSuccess()
+        subscribeOnListeners()
+        subscribeOnObservers()
+    }
+
+    private fun subscribeOnObservers() {
+        binding?.apply {
+            lifecycleScope.launchWhenStarted {
+                launch {
+                    viewModel.logOutStatus.collectLatest {
+                        if (it == true) {
+                            Toast.makeText(
+                                this@MapsTrackerView,
+                                R.string.you_logged_out,
+                                Toast.LENGTH_SHORT)
+                                .show()
+                            startLoginActivity()
+                        }
+                    }
+                }
+                launch {
+                    viewModel.latLngValue.collectLatest {
+                        val updateFactory = CameraUpdateFactory.newLatLngZoom(it, ZOOM_VALUE)
+                        mMap?.addMarker(
+                            MarkerOptions()
+                                .position(it)
+                                .title(getString(R.string.you_are_here))
+                        )
+                        mMap?.moveCamera(updateFactory)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun subscribeOnListeners() {
+        binding?.apply {
+            logout.setOnClickListener {
+                viewModel.logOut()
+            }
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         turnOnGPS()
-        showLocation()
     }
 
     private fun turnOnGPS() {
@@ -86,33 +127,35 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
         builder.addLocationRequest(mLocationReq!!)
             .setAlwaysShow(true)
         val client: SettingsClient = LocationServices.getSettingsClient(this)
-        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
-        task.addOnSuccessListener {
-            checkLocationPermission()
-            Toast.makeText(this, R.string.gps_already_enabled, Toast.LENGTH_SHORT)
-                .show()
+        client.checkLocationSettings(builder.build()).apply {
+            addOnSuccessListener {
+                checkLocationPermission()
+                Toast.makeText(
+                    this@MapsTrackerView,
+                    R.string.gps_already_enabled,
+                    Toast.LENGTH_SHORT
+                )
+                    .show()
+            }
         }
-        task.addOnFailureListener(this) { e: Exception? ->
-            if (e is ResolvableApiException) {
-                try {
-                    gpsState.launch(IntentSenderRequest.Builder(e.resolution).build())
-                } catch (sendIntentException: SendIntentException) {
-                    sendIntentException.printStackTrace()
+        client.checkLocationSettings(builder.build()).apply {
+            addOnFailureListener {
+                if (it is ResolvableApiException) {
+                    try {
+                        gpsState.launch(IntentSenderRequest.Builder(it.resolution).build())
+                    } catch (sendIntentException: SendIntentException) {
+                        sendIntentException.printStackTrace()
+                    }
                 }
             }
         }
     }
 
     private fun checkLocationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ActivityCompat.checkSelfPermission(
-                    this, Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestLocationPermission()
-            } else {
-                requestLocation()
-            }
+        if (ActivityCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            requestLocationPermission()
         } else {
             requestLocation()
         }
@@ -164,35 +207,10 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun onLogoutClickListener() {
-        binding.logout.setOnClickListener {
-            viewModel.logOut()
-        }
-    }
-
-    private fun onLogOutSuccess() {
-        viewModel.logOutStatus.observe(this) {
-            if (it == true) {
-                Toast.makeText(this, R.string.you_logged_out, Toast.LENGTH_SHORT).show()
-                finish()
-            }
-        }
-    }
-
-    private fun showLocation() {
-        viewModel.latLngValue.observe(this) {
-            val updateFactory = CameraUpdateFactory.newLatLngZoom(it, ZOOM_VALUE)
-            mMap.addMarker(
-                MarkerOptions()
-                    .position(it)
-                    .title(getString(R.string.you_are_here))
-            )
-            mMap.moveCamera(updateFactory)
-        }
-    }
-
-    override fun onBackPressed() {
-        super.onBackPressed()
-        finishAffinity()
+    private fun startLoginActivity() {
+        val intent = Intent(this, LoginView::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 }

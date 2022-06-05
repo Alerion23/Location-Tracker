@@ -1,17 +1,12 @@
 package com.wenger.locationtrackerkotlin.tracker
 
-import com.google.android.gms.tasks.Task
-import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
 import com.wenger.common.data.UserLocation
-import com.wenger.common.util.Resource
-import com.wenger.common.util.safeCall
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
@@ -30,20 +25,19 @@ class MapsTrackerRepository(
                 .push()
                 .setValue(map)
                 .addOnSuccessListener {
-                    cont.resumeWith(Result.success(Unit))
+                    cont.resume(Unit)
                 }
                 .addOnFailureListener {
                     cont.resumeWithException(it)
+                    Timber.e(it.message)
                 }
         }
     }
 
-    override suspend fun logOut() {
-        withContext(Dispatchers.IO) {
-            try {
+    override suspend fun logOut(): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            kotlin.runCatching {
                 firebaseAuth.signOut()
-            } catch (e: Exception) {
-                Timber.e(e.localizedMessage)
             }
         }
     }

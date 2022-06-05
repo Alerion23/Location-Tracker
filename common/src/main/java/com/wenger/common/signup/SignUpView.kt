@@ -2,63 +2,68 @@ package com.wenger.common.signup
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.Editable
+import android.view.View
 import android.widget.Toast
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
-import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import com.wenger.common.R
 import com.wenger.common.databinding.ActivitySignUpBinding
-import com.wenger.common.util.Resource
+import com.wenger.common.util.ITextChangeWatcher
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class SignUpView : AppCompatActivity() {
 
     private val viewModel by viewModel<SignUpViewModel>()
-    private lateinit var binding: ActivitySignUpBinding
+    private var binding: ActivitySignUpBinding? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivitySignUpBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        binding = ActivitySignUpBinding.inflate(layoutInflater).also {
+            setContentView(it.root)
+        }
         supportActionBar?.hide()
         setUpView()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        binding = null
+    }
+
     private fun setUpView() {
-        onSignUpClockListener()
-        onRegisterResult()
-        setEmailError()
-        setPasswordError()
-        setUserNameError()
+        subscribeToListeners()
+        subscribeToObservers()
     }
 
-    private fun onSignUpClockListener() {
-        binding.signUpButton.setOnClickListener {
-            val email = binding.typeNewEmail.text.toString().trim()
-            val password = binding.typeNewPassword.text.toString().trim()
-            val userName = binding.typeNewUsername.text.toString().trim()
-            viewModel.createNewUser(email, password, userName)
-        }
-    }
-
-    private fun onRegisterResult() {
-        viewModel.userRegistrationStatus.observe(this) {
-            when (it) {
-                is Resource.Loading -> {
-                    binding.signUpProgressBar.isVisible = true
-                }
-                is Resource.Success -> {
-                    Toast.makeText(this, R.string.success_registration, Toast.LENGTH_SHORT)
-                        .show()
-                    finish()
-                    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
-                }
-                is Resource.Error -> {
-                    binding.signUpProgressBar.isVisible = false
-                    Toast.makeText(this, it.message, Toast.LENGTH_SHORT)
-                        .show()
-                }
+    private fun subscribeToListeners() {
+        binding?.apply {
+            signUpButton.setOnClickListener {
+                signUpProgressBar.visibility = View.VISIBLE
+                viewModel.createNewUser()
             }
+            typeNewEmail.addTextChangedListener(object : ITextChangeWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    if (s != null) {
+                        viewModel.onEmailEntered(s.toString().trim())
+                    }
+                }
+            })
+            typeNewPassword.addTextChangedListener(object : ITextChangeWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    if (s != null) {
+                        viewModel.onPasswordEntered(s.toString().trim())
+                    }
+                }
+            })
+            typeNewUsername.addTextChangedListener(object : ITextChangeWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    if (s != null) {
+                        viewModel.onUserNameEntered(s.toString().trim())
+                    }
+                }
+            })
         }
     }
 
@@ -67,24 +72,33 @@ class SignUpView : AppCompatActivity() {
         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
     }
 
-    private fun setEmailError() {
-        viewModel.errorEmail.observe(this) {
-            binding.typeNewEmail.error = getString(it)
-            binding.typeNewEmail.requestFocus()
-        }
-    }
-
-    private fun setPasswordError() {
-        viewModel.errorPassword.observe(this) {
-            binding.typeNewPassword.error = getString(it)
-            binding.typeNewPassword.requestFocus()
-        }
-    }
-
-    private fun setUserNameError() {
-        viewModel.errorUserName.observe(this) {
-            binding.typeNewUsername.error = getString(it)
-            binding.typeNewUsername.requestFocus()
+    private fun subscribeToObservers() {
+        binding?.apply {
+            lifecycleScope.launchWhenStarted {
+                launch {
+                    viewModel.validState.collectLatest {
+                        signUpButton.isEnabled = it
+                    }
+                }
+                launch {
+                    viewModel.userRegistrationStatus.collectLatest {
+                        it
+                            .onSuccess {
+                                signUpProgressBar.visibility = View.GONE
+                                Toast.makeText(this@SignUpView, R.string.success_registration,
+                                    Toast.LENGTH_SHORT)
+                                    .show()
+                                finish()
+                                overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
+                            }
+                            .onFailure {
+                                signUpProgressBar.visibility = View.GONE
+                                Toast.makeText(this@SignUpView, it.message, Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                    }
+                }
+            }
         }
     }
 }

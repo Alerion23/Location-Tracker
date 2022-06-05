@@ -6,7 +6,6 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ValueEventListener
 import com.wenger.common.data.UserLocation
-import com.wenger.common.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -21,13 +20,15 @@ class MapsCheckerRepository(
     private val databaseReference: DatabaseReference
 ) : IMapsCheckerRepository {
 
-    override suspend fun logOutUser() {
-        withContext(Dispatchers.IO) {
-            firebaseAuth.signOut()
+    override suspend fun logOutUser(): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            kotlin.runCatching {
+                firebaseAuth.signOut()
+            }
         }
     }
 
-    override suspend fun getData(): ArrayList<UserLocation> {
+    override suspend fun getLocationList(): ArrayList<UserLocation> {
         return withContext(Dispatchers.IO) {
             suspendCoroutine { cont ->
                 val userId = firebaseAuth.currentUser?.uid
@@ -41,7 +42,7 @@ class MapsCheckerRepository(
                                 list.add(userLocation)
                             }
                         }
-                        cont.resumeWith(Result.success(list))
+                        cont.resume(list)
                     }
 
                     override fun onCancelled(error: DatabaseError) {

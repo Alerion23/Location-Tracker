@@ -12,4 +12,16 @@
         </shape>
     </item>
 
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <corners
+                android:bottomRightRadius="@dimen/button_radius"
+                android:bottomLeftRadius="@dimen/button_radius"
+                android:topLeftRadius="@dimen/button_radius"
+                android:topRightRadius="@dimen/button_radius"/>
+            <solid android:color="@color/disabled_btn"/>
+        </shape>
+
+    </item>
+
 </selector>

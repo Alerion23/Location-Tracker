@@ -1,8 +1,8 @@
 package com.wenger.locationtrackerkotlin.app
 
 import android.app.Application
-import com.wenger.common.di.firebaseModule
-import com.wenger.common.di.logSignUpModule
+import com.wenger.common.di.databaseModule
+import com.wenger.common.di.authModule
 import com.wenger.locationtrackerkotlin.di.appModule
 import com.wenger.locationtrackerkotlin.di.repositoryModule
 import org.koin.android.ext.koin.androidContext
@@ -16,7 +16,7 @@ class TrackerApplication: Application() {
         startKoin {
             androidLogger()
             androidContext(this@TrackerApplication)
-            modules(listOf(appModule, firebaseModule, repositoryModule, logSignUpModule))
+            modules(listOf(appModule, databaseModule, repositoryModule, authModule))
         }
     }
 
