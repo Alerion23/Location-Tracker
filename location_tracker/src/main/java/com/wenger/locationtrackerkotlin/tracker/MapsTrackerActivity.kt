@@ -9,14 +9,12 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.tasks.Task
 import com.wenger.locationtrackerkotlin.R
 import com.wenger.locationtrackerkotlin.databinding.MapsTrackerViewBinding
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import android.widget.Toast
 import android.content.IntentSender.SendIntentException
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.core.app.ActivityCompat
 
 import com.google.android.gms.common.api.ResolvableApiException
@@ -30,11 +28,12 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.MarkerOptions
-import com.wenger.locationtrackerkotlin.login.LoginView
+import com.wenger.common.util.collectWhenStarted
+import com.wenger.locationtrackerkotlin.login.LoginActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
+class MapsTrackerActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var mMap: GoogleMap? = null
     private var binding: MapsTrackerViewBinding? = null
@@ -77,30 +76,24 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
 
     private fun subscribeOnObservers() {
         binding?.apply {
-            lifecycleScope.launchWhenStarted {
-                launch {
-                    viewModel.logOutStatus.collectLatest {
-                        if (it == true) {
-                            Toast.makeText(
-                                this@MapsTrackerView,
-                                R.string.you_logged_out,
-                                Toast.LENGTH_SHORT)
-                                .show()
-                            startLoginActivity()
-                        }
-                    }
+            viewModel.logOutStatus.collectWhenStarted(lifecycleScope) {
+                if (it == true) {
+                    Toast.makeText(
+                        this@MapsTrackerActivity,
+                        R.string.you_logged_out,
+                        Toast.LENGTH_SHORT)
+                        .show()
+                    startLoginActivity()
                 }
-                launch {
-                    viewModel.latLngValue.collectLatest {
-                        val updateFactory = CameraUpdateFactory.newLatLngZoom(it, ZOOM_VALUE)
-                        mMap?.addMarker(
-                            MarkerOptions()
-                                .position(it)
-                                .title(getString(R.string.you_are_here))
-                        )
-                        mMap?.moveCamera(updateFactory)
-                    }
-                }
+            }
+            viewModel.latLngValue.collectWhenStarted(lifecycleScope) {
+                val updateFactory = CameraUpdateFactory.newLatLngZoom(it, ZOOM_VALUE)
+                mMap?.addMarker(
+                    MarkerOptions()
+                        .position(it)
+                        .title(getString(R.string.you_are_here))
+                )
+                mMap?.moveCamera(updateFactory)
             }
         }
     }
@@ -131,7 +124,7 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
             addOnSuccessListener {
                 checkLocationPermission()
                 Toast.makeText(
-                    this@MapsTrackerView,
+                    this@MapsTrackerActivity,
                     R.string.gps_already_enabled,
                     Toast.LENGTH_SHORT
                 )
@@ -208,9 +201,10 @@ class MapsTrackerView : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun startLoginActivity() {
-        val intent = Intent(this, LoginView::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
         startActivity(intent)
-        finish()
     }
 }

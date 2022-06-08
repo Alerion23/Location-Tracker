@@ -2,12 +2,13 @@ package com.wenger.common
 
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseUser
+import com.wenger.common.util.BaseResult
 
 interface IAuthRepository {
 
-    suspend fun signUpNewUser(email: String, password: String, userName: String) : Result<Void>
+    suspend fun signUpNewUser(email: String, password: String, userName: String) : BaseResult<AuthResult>
 
-    suspend fun signIn(email: String, password: String): Result<AuthResult>
+    suspend fun signIn(email: String, password: String): BaseResult<AuthResult>
 
-    suspend fun checkAuth() : Result<FirebaseUser?>
+    suspend fun checkAuth() : BaseResult<FirebaseUser?>
 }

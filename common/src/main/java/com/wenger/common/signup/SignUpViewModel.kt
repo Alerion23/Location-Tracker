@@ -3,16 +3,20 @@ package com.wenger.common.signup
 import androidx.core.util.PatternsCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.AuthResult
 import com.wenger.common.IAuthRepository
+import com.wenger.common.util.BaseResult
+import com.wenger.common.util.ViewState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class SignUpViewModel(
     private val repository: IAuthRepository
 ) : ViewModel() {
 
-    private val _userRegistrationStatus = MutableSharedFlow<Result<Void>>()
+    private val _userRegistrationStatus = MutableSharedFlow<ViewState<AuthResult>>()
     val userRegistrationStatus = _userRegistrationStatus.asSharedFlow()
 
     private val emailFlow = MutableStateFlow("")
@@ -38,16 +42,8 @@ class SignUpViewModel(
         isEmailValid && isPasswordValid && isUserNameValid
     }
 
-    private val _validState = MutableStateFlow(false)
-    val validState = _validState.asStateFlow()
-
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            _signUpFieldValid.collectLatest {
-                _validState.emit(it)
-            }
-        }
-    }
+    val validState = _signUpFieldValid.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(), false)
 
     fun onEmailEntered(email: String) {
         emailFlow.tryEmit(email)
@@ -66,8 +62,18 @@ class SignUpViewModel(
         val password = passwordFlow.value
         val userName = userNameFlow.value
         viewModelScope.launch(Dispatchers.IO) {
+            _userRegistrationStatus.emit(ViewState.Loading())
             val result = repository.signUpNewUser(email, password, userName)
-            _userRegistrationStatus.emit(result)
+            when (result) {
+                is BaseResult.Success -> {
+                    _userRegistrationStatus.emit(ViewState.Success(result.data))
+                }
+                is BaseResult.Error -> {
+                    val error = result.exception.message
+                    _userRegistrationStatus.emit(ViewState.Error(error))
+                    Timber.e(error)
+                }
+            }
         }
     }
 }

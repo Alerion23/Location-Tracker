@@ -5,6 +5,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.DatabaseReference
 import com.wenger.common.models.UserCredentials
+import com.wenger.common.util.BaseResult
+import com.wenger.common.util.safeCall
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -18,29 +20,32 @@ class AuthRepository(
         email: String,
         password: String,
         userName: String
-    ): Result<Void> {
+    ): BaseResult<AuthResult> {
         return withContext(Dispatchers.IO) {
-            kotlin.runCatching {
+            safeCall {
                 val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
                 val userId = result.user?.uid!!
                 val newUser = UserCredentials(email, password, userName)
                 databaseReference.child(userId).setValue(newUser).await()
+                BaseResult.Success(result)
             }
         }
     }
 
-    override suspend fun signIn(email: String, password: String): Result<AuthResult> {
+    override suspend fun signIn(email: String, password: String): BaseResult<AuthResult> {
         return withContext(Dispatchers.IO) {
-            kotlin.runCatching {
-                firebaseAuth.signInWithEmailAndPassword(email, password).await()
+            safeCall {
+                val result = firebaseAuth.signInWithEmailAndPassword(email, password).await()
+                BaseResult.Success(result)
             }
         }
     }
 
-    override suspend fun checkAuth(): Result<FirebaseUser?> {
+    override suspend fun checkAuth(): BaseResult<FirebaseUser?> {
         return withContext(Dispatchers.IO) {
-            kotlin.runCatching {
-                firebaseAuth.currentUser
+            safeCall {
+                val result = firebaseAuth.currentUser
+                BaseResult.Success(result)
                 }
             }
         }

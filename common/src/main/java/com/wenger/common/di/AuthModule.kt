@@ -1,7 +1,7 @@
 package com.wenger.common.di
 
 import com.wenger.common.base.BaseLauncherViewModel
-import com.wenger.common.login.BaseLoginViewModel
+import com.wenger.common.base.BaseLoginViewModel
 import com.wenger.common.signup.SignUpViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module

@@ -6,24 +6,21 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.maps.*
 
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
+import com.wenger.common.util.ViewState
+import com.wenger.common.util.collectWhenStarted
 import com.wenger.location_viewer.R
 import com.wenger.location_viewer.databinding.MapsCheckerViewBinding
-import com.wenger.location_viewer.login.LoginView
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import com.wenger.location_viewer.login.LoginActivity
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MapsCheckerView : AppCompatActivity(), OnMapReadyCallback {
+class MapsCheckerActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var mMap: GoogleMap? = null
     private var binding: MapsCheckerViewBinding? = null
@@ -50,21 +47,22 @@ class MapsCheckerView : AppCompatActivity(), OnMapReadyCallback {
 
     private fun subscribeOnObservers() {
         binding?.apply {
-            lifecycleScope.launchWhenStarted {
-                launch {
-                    viewModel.logOutState.collectLatest {
-                        if (it == true) {
-                            Toast.makeText(this@MapsCheckerView, R.string.you_logged_out,
-                                Toast.LENGTH_SHORT)
-                                .show()
-                            startLoginActivity()
-                        }
-                    }
+            viewModel.logOutState.collectWhenStarted(lifecycleScope) {
+                if (it == true) {
+                    Toast.makeText(
+                        this@MapsCheckerActivity, R.string.you_logged_out,
+                        Toast.LENGTH_SHORT
+                    )
+                        .show()
+                    startLoginActivity()
                 }
-                launch {
-                    viewModel.location.collectLatest {
-                        if (it.isNotEmpty()) {
-                            it.forEach { userLocationResult ->
+            }
+            viewModel.locationCheck.collectWhenStarted(lifecycleScope) {
+                when (it) {
+                    is ViewState.Success -> {
+                        val result = it.data
+                        if (result.isNotEmpty()) {
+                            result.forEach { userLocationResult ->
                                 val timestamp = userLocationResult.time
                                 val latitude = userLocationResult.latitude
                                 val longitude = userLocationResult.longitude
@@ -81,11 +79,15 @@ class MapsCheckerView : AppCompatActivity(), OnMapReadyCallback {
                                 mMap?.moveCamera(updateFactory)
                             }
                         } else {
-                            Toast.makeText(this@MapsCheckerView
-                                , R.string.no_location_found, Toast.LENGTH_SHORT)
+                            Toast.makeText(
+                                this@MapsCheckerActivity, R.string.no_location_found, Toast.LENGTH_SHORT
+                            )
                                 .show()
                         }
                         progressBarCalendar.visibility = View.GONE
+                    }
+                    is ViewState.Loading -> {
+                        progressBarCalendar.visibility = View.VISIBLE
                     }
                 }
             }
@@ -112,12 +114,11 @@ class MapsCheckerView : AppCompatActivity(), OnMapReadyCallback {
                 calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
                 viewModel.setLocation(calendar)
                 mMap?.clear()
-                progressBarCalendar.isVisible = true
             }
 
             calendarBtn.setOnClickListener {
                 DatePickerDialog(
-                    this@MapsCheckerView, date, calendar.get(Calendar.YEAR),
+                    this@MapsCheckerActivity, date, calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
                 )
                     .show()
@@ -126,10 +127,11 @@ class MapsCheckerView : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun startLoginActivity() {
-        val intent = Intent(this@MapsCheckerView, LoginView::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val intent = Intent(this@MapsCheckerActivity, LoginActivity::class.java)
+        intent.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
         startActivity(intent)
-        finish()
     }
 
 }

@@ -3,6 +3,8 @@ package com.wenger.location_viewer.checker
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wenger.common.data.UserLocation
+import com.wenger.common.util.BaseResult
+import com.wenger.common.util.ViewState
 import com.wenger.location_viewer.models.UserLocationResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,26 +23,28 @@ class MapsCheckerViewModel(
     private val _logOutState = MutableStateFlow(false)
     val logOutState = _logOutState.asStateFlow()
 
-    private val _location = MutableSharedFlow<ArrayList<UserLocationResult>>()
-    val location = _location.asSharedFlow()
+    private val _locationCheck = MutableSharedFlow<ViewState<ArrayList<UserLocationResult>>>()
+    val locationCheck = _locationCheck.asSharedFlow()
 
     private var validDate: Boolean? = null
 
     fun logOut() {
         viewModelScope.launch(Dispatchers.IO) {
             val result = repository.logOutUser()
-            result
-                .onSuccess {
+            when(result) {
+                is BaseResult.Success -> {
                     _logOutState.emit(true)
                 }
-                .onFailure {
-                    Timber.e(it.message)
+                is BaseResult.Error -> {
+                    Timber.e(result.exception.message)
                 }
+            }
         }
     }
 
     fun setLocation(calendar: Calendar) {
         viewModelScope.launch(Dispatchers.IO) {
+            _locationCheck.emit(ViewState.Loading())
             val result: ArrayList<UserLocation> = repository.getLocationList()
             getValues(result, calendar)
         }
@@ -59,7 +63,7 @@ class MapsCheckerViewModel(
             }
         }
         viewModelScope.launch {
-            _location.emit(listResult)
+            _locationCheck.emit(ViewState.Success(listResult))
         }
 
     }

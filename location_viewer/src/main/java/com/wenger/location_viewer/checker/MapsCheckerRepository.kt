@@ -6,6 +6,8 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ValueEventListener
 import com.wenger.common.data.UserLocation
+import com.wenger.common.util.BaseResult
+import com.wenger.common.util.safeCall
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -20,10 +22,11 @@ class MapsCheckerRepository(
     private val databaseReference: DatabaseReference
 ) : IMapsCheckerRepository {
 
-    override suspend fun logOutUser(): Result<Unit> {
+    override suspend fun logOutUser(): BaseResult<Unit> {
         return withContext(Dispatchers.IO) {
-            kotlin.runCatching {
-                firebaseAuth.signOut()
+            safeCall {
+               val result = firebaseAuth.signOut()
+                BaseResult.Success(result)
             }
         }
     }

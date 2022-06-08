@@ -3,6 +3,8 @@ package com.wenger.locationtrackerkotlin.tracker
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
 import com.wenger.common.data.UserLocation
+import com.wenger.common.util.BaseResult
+import com.wenger.common.util.safeCall
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -34,10 +36,11 @@ class MapsTrackerRepository(
         }
     }
 
-    override suspend fun logOut(): Result<Unit> {
+    override suspend fun logOut(): BaseResult<Unit> {
         return withContext(Dispatchers.IO) {
-            kotlin.runCatching {
-                firebaseAuth.signOut()
+            safeCall {
+               val result = firebaseAuth.signOut()
+                BaseResult.Success(result)
             }
         }
     }

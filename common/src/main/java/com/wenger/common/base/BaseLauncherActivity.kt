@@ -4,10 +4,11 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import com.wenger.common.util.collectWhenStarted
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-abstract class BaseLauncher : AppCompatActivity() {
+abstract class BaseLauncherActivity : AppCompatActivity() {
 
     protected val viewModel by viewModel<BaseLauncherViewModel>()
 
@@ -20,15 +21,13 @@ abstract class BaseLauncher : AppCompatActivity() {
     }
 
     private fun subscribeOnObservers() {
-        lifecycleScope.launchWhenStarted {
-            viewModel.userExist.collectLatest {
-                when (it) {
-                    true -> {
-                        startMapActivity()
-                    }
-                    false -> {
-                        startLoginActivity()
-                    }
+        viewModel.userExist.collectWhenStarted(lifecycleScope) {
+            when (it) {
+                true -> {
+                    startMapActivity()
+                }
+                false -> {
+                    startLoginActivity()
                 }
             }
         }

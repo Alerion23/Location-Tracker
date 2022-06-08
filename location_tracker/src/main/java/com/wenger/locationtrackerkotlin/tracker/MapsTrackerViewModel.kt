@@ -1,12 +1,11 @@
 package com.wenger.locationtrackerkotlin.tracker
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
 import com.wenger.common.data.UserLocation
+import com.wenger.common.util.BaseResult
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,13 +39,14 @@ class MapsTrackerViewModel(
     fun logOut() {
         viewModelScope.launch(Dispatchers.Main) {
             val result = repository.logOut()
-            result
-                .onSuccess {
+            when (result) {
+                is BaseResult.Success -> {
                     _logOutStatus.emit(true)
                 }
-                .onFailure {
-                    Timber.e(it.message)
+                is BaseResult.Error -> {
+                    Timber.e(result.exception.message)
                 }
+            }
         }
     }
 

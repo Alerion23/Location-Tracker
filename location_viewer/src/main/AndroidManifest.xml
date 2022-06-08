@@ -20,7 +20,7 @@
             android:value="@integer/google_play_services_version" />
 
         <activity
-            android:name=".launcher.LauncherActivity"
+            android:name=".LauncherActivity"
             android:exported="true"
             android:theme="@style/Theme.App.Starting">
             <intent-filter>
@@ -30,10 +30,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".checker.MapsCheckerView"
+            android:name=".checker.MapsCheckerActivity"
             android:exported="true" />
-        <activity android:name=".login.LoginView" />
-        <activity android:name="com.wenger.common.signup.SignUpView" />
+        <activity android:name=".login.LoginActivity" />
+        <activity android:name="com.wenger.common.signup.SignUpActivity" />
     </application>
 
 </manifest>
