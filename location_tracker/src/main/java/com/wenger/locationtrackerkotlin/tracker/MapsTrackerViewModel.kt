@@ -20,8 +20,8 @@ class MapsTrackerViewModel(
     private val _logOutStatus = MutableStateFlow(false)
     val logOutStatus = _logOutStatus.asStateFlow()
 
-    private val _latLngValue = MutableSharedFlow<LatLng>()
-    val latLngValue = _latLngValue.asSharedFlow()
+    private val _myLocation = MutableSharedFlow<LatLng>()
+    val myLocation = _myLocation.asSharedFlow()
 
     fun saveLocation(locationResult: LocationResult) {
         val location = locationResult.lastLocation
@@ -32,7 +32,7 @@ class MapsTrackerViewModel(
         val userLocation = UserLocation(time, latitude, longitude)
         viewModelScope.launch(Dispatchers.IO) {
             repository.addLocation(userLocation)
-            _latLngValue.emit(latLng)
+            _myLocation.emit(latLng)
         }
     }
 

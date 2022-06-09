@@ -25,6 +25,7 @@ abstract class BaseLoginActivity : AppCompatActivity() {
             setContentView(it.root)
         }
         supportActionBar?.hide()
+        observeViewModel()
         setUpView()
     }
 
@@ -34,11 +35,6 @@ abstract class BaseLoginActivity : AppCompatActivity() {
     }
 
     private fun setUpView() {
-        subscribeToListeners()
-        subscribeToObservers()
-    }
-
-    private fun subscribeToListeners() {
         binding?.apply {
             signInButton.setOnClickListener {
                 viewModel.loginUser()
@@ -49,8 +45,7 @@ abstract class BaseLoginActivity : AppCompatActivity() {
             }
 
             typeEmail.listenTextChange().collectWhenStarted(lifecycleScope) {
-                    viewModel.onEmailEntered(it)
-
+                viewModel.onEmailEntered(it)
             }
 
             typePassword.listenTextChange().collectWhenStarted(lifecycleScope) {
@@ -59,7 +54,7 @@ abstract class BaseLoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun subscribeToObservers() {
+    private fun observeViewModel() {
         binding?.apply {
             viewModel.validState.collectWhenStarted(lifecycleScope) {
                 signInButton.isEnabled = it

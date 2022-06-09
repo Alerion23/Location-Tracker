@@ -16,8 +16,8 @@ class SignUpViewModel(
     private val repository: IAuthRepository
 ) : ViewModel() {
 
-    private val _userRegistrationStatus = MutableSharedFlow<ViewState<AuthResult>>()
-    val userRegistrationStatus = _userRegistrationStatus.asSharedFlow()
+    private val _userRegistrationStatus = MutableStateFlow<ViewState<AuthResult>>(ViewState.Default)
+    val userRegistrationStatus = _userRegistrationStatus.asStateFlow()
 
     private val emailFlow = MutableStateFlow("")
 
@@ -25,25 +25,13 @@ class SignUpViewModel(
 
     private val userNameFlow = MutableStateFlow("")
 
-    private val _signUpFieldValid = combine(emailFlow, passwordFlow, userNameFlow) {
-        email, password, userName ->
-        var isEmailValid = false
-        var isPasswordValid = false
-        var isUserNameValid = false
-        if (email.isNotEmpty() && PatternsCompat.EMAIL_ADDRESS.matcher(email).matches()) {
-            isEmailValid = true
-        }
-        if (password.isNotEmpty() && password.length >= 8) {
-            isPasswordValid = true
-        }
-        if (userName.isNotEmpty()) {
-            isUserNameValid = true
-        }
+    val validState = combine(emailFlow, passwordFlow, userNameFlow) { email, password, userName ->
+        val isEmailValid =
+            email.isNotEmpty() && PatternsCompat.EMAIL_ADDRESS.matcher(email).matches()
+        val isPasswordValid = password.isNotEmpty() && password.length >= 8
+        val isUserNameValid = userName.isNotEmpty()
         isEmailValid && isPasswordValid && isUserNameValid
     }
-
-    val validState = _signUpFieldValid.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(), false)
 
     fun onEmailEntered(email: String) {
         emailFlow.tryEmit(email)
@@ -62,16 +50,15 @@ class SignUpViewModel(
         val password = passwordFlow.value
         val userName = userNameFlow.value
         viewModelScope.launch(Dispatchers.IO) {
-            _userRegistrationStatus.emit(ViewState.Loading())
+            _userRegistrationStatus.emit(ViewState.Loading)
             val result = repository.signUpNewUser(email, password, userName)
-            when (result) {
+            _userRegistrationStatus.value = when (result) {
                 is BaseResult.Success -> {
-                    _userRegistrationStatus.emit(ViewState.Success(result.data))
+                    ViewState.Success(result.data)
                 }
                 is BaseResult.Error -> {
                     val error = result.exception.message
-                    _userRegistrationStatus.emit(ViewState.Error(error))
-                    Timber.e(error)
+                    ViewState.Error(error)
                 }
             }
         }

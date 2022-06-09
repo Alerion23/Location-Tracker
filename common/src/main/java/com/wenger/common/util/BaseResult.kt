@@ -1,7 +1,7 @@
 package com.wenger.common.util
 
-sealed class BaseResult<T>() {
+sealed class BaseResult<out T> {
 
     class Success<T>(val data: T) : BaseResult<T>()
-    class Error<T>(val exception: Exception) : BaseResult<T>()
+    class Error(val exception: Exception) : BaseResult<Nothing>()
 }

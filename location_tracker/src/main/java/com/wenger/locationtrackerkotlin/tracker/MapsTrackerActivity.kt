@@ -27,11 +27,10 @@ import com.google.android.gms.location.LocationResult
 
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.wenger.common.util.collectWhenStarted
 import com.wenger.locationtrackerkotlin.login.LoginActivity
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class MapsTrackerActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -63,6 +62,7 @@ class MapsTrackerActivity : AppCompatActivity(), OnMapReadyCallback {
             setContentView(it.root)
         }
         supportActionBar?.hide()
+        observeViewModel()
         setUpView()
     }
 
@@ -70,38 +70,26 @@ class MapsTrackerActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
-        subscribeOnListeners()
-        subscribeOnObservers()
+        binding?.logout?.setOnClickListener {
+            viewModel.logOut()
+        }
     }
 
-    private fun subscribeOnObservers() {
+    private fun observeViewModel() {
         binding?.apply {
             viewModel.logOutStatus.collectWhenStarted(lifecycleScope) {
                 if (it == true) {
                     Toast.makeText(
                         this@MapsTrackerActivity,
                         R.string.you_logged_out,
-                        Toast.LENGTH_SHORT)
+                        Toast.LENGTH_SHORT
+                    )
                         .show()
                     startLoginActivity()
                 }
             }
-            viewModel.latLngValue.collectWhenStarted(lifecycleScope) {
-                val updateFactory = CameraUpdateFactory.newLatLngZoom(it, ZOOM_VALUE)
-                mMap?.addMarker(
-                    MarkerOptions()
-                        .position(it)
-                        .title(getString(R.string.you_are_here))
-                )
-                mMap?.moveCamera(updateFactory)
-            }
-        }
-    }
-
-    private fun subscribeOnListeners() {
-        binding?.apply {
-            logout.setOnClickListener {
-                viewModel.logOut()
+            viewModel.myLocation.collectWhenStarted(lifecycleScope) {
+                createLocationMarkers(it)
             }
         }
     }
@@ -109,6 +97,16 @@ class MapsTrackerActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         turnOnGPS()
+    }
+
+    private fun createLocationMarkers(myLocation: LatLng) {
+        val updateFactory = CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_VALUE)
+        mMap?.addMarker(
+            MarkerOptions()
+                .position(myLocation)
+                .title(getString(R.string.you_are_here))
+        )
+        mMap?.moveCamera(updateFactory)
     }
 
     private fun turnOnGPS() {
@@ -146,8 +144,10 @@ class MapsTrackerActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun checkLocationPermission() {
         if (ActivityCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            )
+            != PackageManager.PERMISSION_GRANTED
+        ) {
             requestLocationPermission()
         } else {
             requestLocation()
@@ -201,10 +201,9 @@ class MapsTrackerActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun startLoginActivity() {
-        val intent = Intent(this, LoginActivity::class.java)
-        intent.apply {
+        Intent(this, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(this)
         }
-        startActivity(intent)
     }
 }

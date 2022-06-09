@@ -10,7 +10,7 @@ class LoginActivity: BaseLoginActivity() {
         val intent = Intent(this, MapsCheckerActivity::class.java)
         intent.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(this)
         }
-        startActivity(intent)
     }
 }

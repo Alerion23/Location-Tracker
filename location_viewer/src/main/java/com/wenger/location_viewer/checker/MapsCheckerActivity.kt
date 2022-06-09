@@ -34,6 +34,7 @@ class MapsCheckerActivity : AppCompatActivity(), OnMapReadyCallback {
             setContentView(it.root)
         }
         supportActionBar?.hide()
+        observeViewModel()
         setUpView()
     }
 
@@ -41,11 +42,12 @@ class MapsCheckerActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
-        subscribeOnListeners()
-        subscribeOnObservers()
+        binding?.logout?.setOnClickListener {
+            viewModel.logOut()
+        }
     }
 
-    private fun subscribeOnObservers() {
+    private fun observeViewModel() {
         binding?.apply {
             viewModel.logOutState.collectWhenStarted(lifecycleScope) {
                 if (it == true) {
@@ -94,12 +96,6 @@ class MapsCheckerActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun subscribeOnListeners() {
-            binding?.logout?.setOnClickListener {
-                viewModel.logOut()
-            }
-    }
-
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         onCalendarClickListener()
@@ -127,11 +123,10 @@ class MapsCheckerActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun startLoginActivity() {
-        val intent = Intent(this@MapsCheckerActivity, LoginActivity::class.java)
-        intent.apply {
+        Intent(this@MapsCheckerActivity, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(this)
         }
-        startActivity(intent)
     }
 
 }

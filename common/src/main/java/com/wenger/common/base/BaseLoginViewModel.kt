@@ -15,28 +15,19 @@ class BaseLoginViewModel(
     private val repository: IAuthRepository
 ) : ViewModel() {
 
-    private val _loginStatus = MutableSharedFlow<ViewState<AuthResult?>>()
-    val loginStatus = _loginStatus.asSharedFlow()
+    private val _loginStatus = MutableStateFlow<ViewState<AuthResult>>(ViewState.Default)
+    val loginStatus = _loginStatus.asStateFlow()
 
     private val emailFlow = MutableStateFlow("")
 
     private val passwordFlow = MutableStateFlow("")
 
-    private val _loginFieldValid = emailFlow.combine(passwordFlow) { email, password ->
-        var isEmailValid = false
-        var isPasswordValid = false
-        if (email.isNotEmpty() && PatternsCompat.EMAIL_ADDRESS.matcher(email).matches()) {
-            isEmailValid = true
-        }
-        if (password.isNotEmpty() && password.length >= 8) {
-            isPasswordValid = true
-        }
+    val validState = emailFlow.combine(passwordFlow) { email, password ->
+        val isEmailValid =
+            email.isNotEmpty() && PatternsCompat.EMAIL_ADDRESS.matcher(email).matches()
+        val isPasswordValid = password.isNotEmpty() && password.length >= 8
         isEmailValid && isPasswordValid
     }
-
-    val validState = _loginFieldValid.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(), false
-    )
 
     fun onEmailEntered(email: String) {
         emailFlow.tryEmit(email)
@@ -50,19 +41,17 @@ class BaseLoginViewModel(
         val email = emailFlow.value
         val password = passwordFlow.value
         viewModelScope.launch(Dispatchers.IO) {
-            _loginStatus.emit(ViewState.Loading())
+            _loginStatus.emit(ViewState.Loading)
             val result = repository.signIn(email, password)
-            when(result) {
+            _loginStatus.value = when (result) {
                 is BaseResult.Success -> {
-                    _loginStatus.emit(ViewState.Success(result.data))
+                    ViewState.Success(result.data)
                 }
                 is BaseResult.Error -> {
                     val error = result.exception.message
-                    _loginStatus.emit(ViewState.Error(error))
-                    Timber.e(error)
+                    ViewState.Error(error)
                 }
             }
-
         }
     }
 }

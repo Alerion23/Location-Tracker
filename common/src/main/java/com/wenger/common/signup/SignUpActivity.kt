@@ -23,6 +23,7 @@ class SignUpActivity : AppCompatActivity() {
             setContentView(it.root)
         }
         supportActionBar?.hide()
+        observeViewModel()
         setUpView()
     }
 
@@ -32,11 +33,6 @@ class SignUpActivity : AppCompatActivity() {
     }
 
     private fun setUpView() {
-        subscribeToListeners()
-        subscribeToObservers()
-    }
-
-    private fun subscribeToListeners() {
         binding?.apply {
             signUpButton.setOnClickListener {
                 viewModel.createNewUser()
@@ -51,14 +47,14 @@ class SignUpActivity : AppCompatActivity() {
                 viewModel.onUserNameEntered(it)
             }
         }
+
     }
 
     override fun onBackPressed() {
-        finish()
         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
     }
 
-    private fun subscribeToObservers() {
+    private fun observeViewModel() {
         binding?.apply {
             viewModel.validState.collectWhenStarted(lifecycleScope) {
                 signUpButton.isEnabled = it
@@ -67,8 +63,10 @@ class SignUpActivity : AppCompatActivity() {
                 when (it) {
                     is ViewState.Success -> {
                         signUpProgressBar.visibility = View.GONE
-                        Toast.makeText(this@SignUpActivity, R.string.success_registration,
-                            Toast.LENGTH_SHORT)
+                        Toast.makeText(
+                            this@SignUpActivity, R.string.success_registration,
+                            Toast.LENGTH_SHORT
+                        )
                             .show()
                         finish()
                         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)

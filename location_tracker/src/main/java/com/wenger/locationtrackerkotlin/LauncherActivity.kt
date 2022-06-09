@@ -11,19 +11,17 @@ import com.wenger.locationtrackerkotlin.tracker.MapsTrackerActivity
 class LauncherActivity : BaseLauncherActivity() {
 
     override fun startMapActivity() {
-        val intent = Intent(this, MapsTrackerActivity::class.java)
-        intent.apply {
+        Intent(this, MapsTrackerActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(this)
         }
-        startActivity(intent)
     }
 
     override fun startLoginActivity() {
-        val intent = Intent(this, LoginActivity::class.java)
-        intent.apply {
+        Intent(this, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(this)
         }
-        startActivity(intent)
     }
 
 }

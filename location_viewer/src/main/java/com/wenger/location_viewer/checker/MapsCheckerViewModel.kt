@@ -44,7 +44,7 @@ class MapsCheckerViewModel(
 
     fun setLocation(calendar: Calendar) {
         viewModelScope.launch(Dispatchers.IO) {
-            _locationCheck.emit(ViewState.Loading())
+            _locationCheck.emit(ViewState.Loading)
             val result: ArrayList<UserLocation> = repository.getLocationList()
             getValues(result, calendar)
         }

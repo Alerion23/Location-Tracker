@@ -6,6 +6,7 @@ import com.wenger.common.data.UserLocation
 import com.wenger.common.util.BaseResult
 import com.wenger.common.util.safeCall
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.internal.resumeCancellableWith
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import kotlin.coroutines.resume
@@ -17,9 +18,8 @@ class MapsTrackerRepository(
     private val databaseReference: DatabaseReference
 ) : IMapsTrackerRepository {
 
-
-    override suspend fun addLocation(userLocation: UserLocation) {
-        suspendCoroutine<Unit> { cont ->
+    override suspend fun addLocation(userLocation: UserLocation) : BaseResult<Unit> {
+        return suspendCoroutine { cont ->
             val map: Map<String, Any> = userLocation.toMap()
             val userId = firebaseAuth.currentUser?.uid
             databaseReference
@@ -27,10 +27,10 @@ class MapsTrackerRepository(
                 .push()
                 .setValue(map)
                 .addOnSuccessListener {
-                    cont.resume(Unit)
+                    cont.resume(BaseResult.Success(Unit))
                 }
                 .addOnFailureListener {
-                    cont.resumeWithException(it)
+                    BaseResult.Error(it)
                     Timber.e(it.message)
                 }
         }

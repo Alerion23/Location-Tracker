@@ -5,7 +5,7 @@ import com.wenger.common.util.BaseResult
 
 interface IMapsTrackerRepository {
 
-    suspend fun addLocation(userLocation: UserLocation)
+    suspend fun addLocation(userLocation: UserLocation) : BaseResult<Unit>
 
     suspend fun logOut() : BaseResult<Unit>
 
