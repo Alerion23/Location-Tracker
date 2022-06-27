@@ -7,4 +7,6 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Location tracker kotlin"
-include ':app'
+include ':location_tracker'
+include ':location_viewer'
+include ':common'

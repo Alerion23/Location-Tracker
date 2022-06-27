@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Kotlin LC</string>
+    <string name="calendar">Calendar</string>
+    <string name="no_location_found">No location found</string>
+    <string name="you_logged_out">You are logged out</string>
+
+</resources>
